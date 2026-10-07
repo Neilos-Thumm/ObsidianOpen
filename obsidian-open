@@ -1,0 +1,26 @@
+#!/bin/sh
+# obsidian-open — open files in Obsidian from anywhere (yazi, shell, etc.)
+#
+# Resolves symlinks to the real file inside the vault, then hands Obsidian
+# an absolute path. Obsidian works out which vault owns that path itself,
+# so there's no vault name to hard-code.
+#
+# paneType=tab  -> open in a new tab instead of replacing the active one.
+# Pair with the Mononote community plugin so that, if the note is already
+# open, Obsidian jumps to that existing tab instead of making a duplicate.
+#
+# Install: put this on your PATH (e.g. ~/.local/bin) and `chmod +x` it.
+
+[ $# -eq 0 ] && { echo "usage: obsidian-open FILE..." >&2; exit 1; }
+
+for f in "$@"; do
+  uri=$(python3 - "$f" <<'PY'
+import os, sys, urllib.parse
+real = os.path.realpath(sys.argv[1])
+if not os.path.exists(real):
+    sys.exit(f"obsidian-open: not found: {sys.argv[1]}")
+print("obsidian://open?path=" + urllib.parse.quote(real, safe="") + "&paneType=tab")
+PY
+  ) || continue
+  open "$uri"
+done
